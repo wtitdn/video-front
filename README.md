@@ -2,6 +2,8 @@
 
 项目原地址：https://github.com/LeoninCS/feedsystem_video_go.git 
 
+对应后端地址：https://github.com/wtitdn/Short-video-project
+
 
 前端由vue3+vite构建，AI生成，但是也写一个以防万一真的有人需要
 ```
