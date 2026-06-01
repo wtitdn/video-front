@@ -20,11 +20,27 @@ const toast = useToastStore()
 
 const busy = ref(false)
 const loginForm = reactive({ username: '', password: '' })
+const profile = reactive({
+  avatarUrl: '',
+})
 
 const me = computed(() => ({
   id: auth.claims?.account_id ?? 0,
   username: auth.claims?.username ?? '',
 }))
+
+async function loadMyProfile() {
+  if (!auth.isLoggedIn || !me.value.id) {
+    profile.avatarUrl = ''
+    return
+  }
+  try {
+    const account = await accountApi.findById(me.value.id)
+    profile.avatarUrl = account.avatar_url ?? ''
+  } catch {
+    profile.avatarUrl = ''
+  }
+}
 
 const myVideos = reactive({
   loading: false,
@@ -103,6 +119,24 @@ async function goVideo(id: number) {
   await router.push(`/video/${id}`)
 }
 
+async function deleteMyVideo(video: Video) {
+  if (busy.value) return
+  if (!window.confirm(`确认删除视频「${video.title}」？`)) return
+
+  busy.value = true
+  try {
+    await videoApi.deleteVideo(video.id)
+    myVideos.items = myVideos.items.filter((item) => item.id !== video.id)
+    likedVideos.items = likedVideos.items.filter((item) => item.id !== video.id)
+    toast.info('视频已删除')
+  } catch (e) {
+    const msg = e instanceof ApiError ? e.message : String(e)
+    toast.error(msg)
+  } finally {
+    busy.value = false
+  }
+}
+
 function openWorksVideos() {
   videoTab.value = 'works'
   void loadMyVideos()
@@ -127,6 +161,7 @@ async function onLogin() {
     const res = await accountApi.login(username, password)
     auth.setTokens(res.token, res.refresh_token ?? '')
     toast.success('登录成功')
+    await loadMyProfile()
     await social.refreshMine()
     await loadMyVideos()
   } catch (e) {
@@ -197,6 +232,7 @@ watch(
       likedVideos.error = ''
 
       videoTab.value = 'works'
+      profile.avatarUrl = ''
     }
   },
 )
@@ -205,6 +241,7 @@ watch(
   () => me.value.id,
   (id) => {
     if (auth.isLoggedIn && id) {
+      void loadMyProfile()
       void loadMyVideos()
       if (videoTab.value === 'likes') void loadLikedVideos()
     }
@@ -241,7 +278,7 @@ watch(
       <div class="card">
         <div class="row" style="justify-content: space-between; align-items: flex-start">
           <div class="row" style="gap: 12px; align-items: center">
-            <UserAvatar :username="me.username" :id="me.id" :size="64" />
+            <UserAvatar :username="me.username" :id="me.id" :src="profile.avatarUrl" :size="64" />
             <div>
               <div class="title" style="margin: 0">@{{ me.username }}</div>
               <div class="subtle mono">#{{ me.id }}</div>
@@ -286,13 +323,17 @@ watch(
           <div v-else-if="myVideos.items.length === 0" class="hint" style="margin-top: 12px">暂无作品</div>
 
           <div v-else class="video-grid" style="margin-top: 12px">
-            <button v-for="v in myVideos.items" :key="v.id" class="video-card" type="button" @click="goVideo(v.id)">
+            <div v-for="v in myVideos.items" :key="v.id" class="video-card">
               <img class="video-cover" :src="v.cover_url" :alt="v.title" loading="lazy" />
               <div class="video-meta">
                 <div class="video-title">{{ v.title }}</div>
                 <div class="video-sub subtle">❤️ {{ v.likes_count }} · {{ new Date(v.create_time).toLocaleDateString() }}</div>
+                <div class="video-actions">
+                  <button class="mini" type="button" @click="goVideo(v.id)">查看</button>
+                  <button class="mini danger" type="button" :disabled="busy" @click="deleteMyVideo(v)">删除</button>
+                </div>
               </div>
-            </button>
+            </div>
           </div>
         </template>
         <template v-else>
@@ -497,7 +538,6 @@ watch(
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   overflow: hidden;
-  cursor: pointer;
   padding: 0;
   text-align: left;
 }
@@ -530,6 +570,36 @@ watch(
 .video-sub {
   margin-top: 6px;
   font-size: 12px;
+}
+
+.video-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mini {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 9px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.mini:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mini.danger {
+  border-color: rgba(254, 44, 85, 0.45);
+  background: rgba(254, 44, 85, 0.12);
+}
+
+.mini:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .user-row {

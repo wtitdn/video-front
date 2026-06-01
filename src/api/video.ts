@@ -37,6 +37,10 @@ export function getDetail(id: number) {
   return postJson<Video>('/video/getDetail', { id })
 }
 
+export function deleteVideo(id: number) {
+  return postJson<{ message: string }>('/video/delete', { id }, { authRequired: true })
+}
+
 // --- Chunk Upload API ---
 
 export type InitChunkUploadResponse = {

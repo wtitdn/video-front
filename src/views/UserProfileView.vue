@@ -170,7 +170,12 @@ onMounted(loadProfile)
     <div class="card">
       <div class="row" style="justify-content: space-between; align-items: flex-start">
         <div class="row" style="gap: 12px; align-items: center">
-          <UserAvatar :username="state.user?.username ?? 'User'" :id="state.user?.id ?? userId" :size="64" />
+          <UserAvatar
+            :username="state.user?.username ?? 'User'"
+            :id="state.user?.id ?? userId"
+            :src="state.user?.avatar_url"
+            :size="64"
+          />
           <div>
             <div class="title" style="margin: 0">@{{ state.user?.username ?? '-' }}</div>
             <div class="subtle mono">#{{ state.user?.id ?? userId }}</div>
@@ -240,7 +245,7 @@ onMounted(loadProfile)
           <div v-else-if="listItems.length === 0" class="drawer-hint">暂无</div>
 
           <button v-for="u in listItems" :key="u.id" class="user-row" type="button" @click="goUser(u.id)">
-            <UserAvatar :username="u.username" :id="u.id" :size="40" />
+            <UserAvatar :username="u.username" :id="u.id" :src="u.avatar_url" :size="40" />
             <div class="user-meta">
               <div class="user-name">@{{ u.username }}</div>
               <div class="user-id mono">#{{ u.id }}</div>

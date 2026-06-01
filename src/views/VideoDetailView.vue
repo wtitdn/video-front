@@ -29,6 +29,11 @@ const state = reactive({
   busy: false,
 })
 
+const canDeleteVideo = computed(() => {
+  const myId = auth.claims?.account_id
+  return !!myId && !!state.video && myId === state.video.author_id
+})
+
 const muted = ref(true)
 const videoEl = ref<HTMLVideoElement | null>(null)
 
@@ -152,6 +157,25 @@ async function share() {
     toast.success('链接已复制')
   } catch {
     window.prompt('复制链接', url)
+  }
+}
+
+async function deleteVideo() {
+  if (!state.video) return
+  if (!auth.isLoggedIn) return needLogin()
+  if (!canDeleteVideo.value || state.busy) return
+  if (!window.confirm(`确认删除视频「${state.video.title}」？`)) return
+
+  state.busy = true
+  try {
+    await videoApi.deleteVideo(state.video.id)
+    toast.info('视频已删除')
+    await router.push('/account')
+  } catch (e) {
+    const msg = e instanceof ApiError ? e.message : String(e)
+    toast.error(msg)
+  } finally {
+    state.busy = false
   }
 }
 
@@ -345,6 +369,11 @@ onMounted(async () => {
               <span class="icon">↗</span>
               <span class="count">分享</span>
             </button>
+
+            <button v-if="canDeleteVideo" class="act danger" type="button" :disabled="state.busy" @click.stop="deleteVideo">
+              <span class="icon">删</span>
+              <span class="count">删除</span>
+            </button>
           </div>
 
           <div class="hint">
@@ -518,6 +547,11 @@ onMounted(async () => {
 
 .act:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.act.danger {
+  border-color: rgba(254, 44, 85, 0.45);
+  background: rgba(254, 44, 85, 0.12);
 }
 
 .act:disabled {

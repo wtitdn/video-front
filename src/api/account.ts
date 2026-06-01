@@ -1,8 +1,17 @@
 import { postForm, postJson } from './client'
 import type { Account, MessageResponse, TokenResponse } from './types'
 
-export function register(username: string, password: string) {
-  return postJson<MessageResponse>('/account/register', { username, password })
+export function register(username: string, password: string, email: string, verifyCode: string) {
+  return postJson<MessageResponse>('/account/register', {
+    username,
+    password,
+    email,
+    verify_code: verifyCode,
+  })
+}
+
+export function sendEmailCode(email: string) {
+  return postJson<MessageResponse>('/account/sendEmailCode', { email })
 }
 
 export function login(username: string, password: string) {
